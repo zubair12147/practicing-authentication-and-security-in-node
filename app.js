@@ -1,70 +1,72 @@
+require('dotenv').config();
 const express = require('express');
 const ejs = require('ejs');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
-const encryp = require('mongoose-encryption');
+const session = require('express-session');
+const passport = require('passport');
+const passportLocalMongoose = require('passport-local-mongoose');
 
-mongoose.connect('mongodb://localhost:27017/userDB');
 
 const app = express();
 app.use(express.static('public'));
 app.set('view engine', 'ejs');
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.urlencoded({extended: true}));
+
+app.use(session({
+  secret: "",
+  resave: false,
+  saveUninitialized:false
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+mongoose.connect('mongodb://localhost:27017/userDB');
+// mongoose.set('useCreateIndex',true);
 
 const userSchema = new mongoose.Schema({
-    email: {
-        type: String,
-        required: true,
-        index: { unique: true },
-        lowercase: true,
-        // match: [/\S+@\S+\.\S+/, 'is invalid'],
-    },
-    password: {
-        type: String,
-        required: true,
-    }
+  email: {
+    type: String,
+    required: true,
+    index: {unique: true},
+    lowercase: true,
+  },
+  password: {
+    type: String,
+    required: true,
+  },
 });
-const secretString = "This is m ylittle string";
-userSchema.plugin(encryp,{secret:secretString,encryptedFields:['password']});
+
+userSchema.plugin(passportLocalMongoose);
 
 const User = mongoose.model('User', userSchema);
 
+passport.use(User.createStrategy());
+
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
 
 app.get('/', (req, res) => {
-    res.render('home');
+  res.render('home');
 });
 
 app.get('/login', (req, res) => {
-    res.render('login');
+  res.render('login');
 });
 
 app.get('/register', (req, res) => {
-    res.render('register');
+  res.render('register');
 });
 
 app.post('/register', (req, res) => {
-    const newUser = new User({
-        email: req.body.username,
-        password: req.body.password,
-    });
-    newUser.save().then(res.render('secrets')).catch((err) => {
-        console.log('There is an error');
-        console.log(err);
-    });
+
 });
 
-app.post('/login',(req,res)=>{
-    const userName = req.body.username;
-    const password = req.body.password;
-
-    User.find({
-        email:userName,
-        password: password
-    }).then( res.render('secrets')).catch((err)=>{
-        console.log(err);
-    })
-})
+app.post('/login', (req, res) => {
+  
+});
 
 app.listen(3000, () => {
-    console.log('server started on port: 3000');
+  console.log('server started on port: 3000');
 });
